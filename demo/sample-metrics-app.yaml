@@ -13,6 +13,9 @@ spec:
     metadata:
       labels:
         app: sample-metrics-app
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
     spec:
       tolerations:
       - key: beta.kubernetes.io/arch
