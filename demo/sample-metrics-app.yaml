@@ -35,6 +35,13 @@ spec:
       containers:
       - image: luxas/autoscale-demo:v0.1.2
         name: sample-metrics-app
+        resources:
+          limits:
+            cpu: 100m
+            memory: 50Mi
+          requests:
+            cpu: 100m
+            memory: 50Mi
         ports:
         - name: web
           containerPort: 8080

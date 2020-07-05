@@ -1,6 +1,8 @@
 #!/bin/bash
 set -euo pipefail
 
+export DEMO_HOME="$(pwd)"
+
 minikube delete
 minikube start --kubernetes-version=v1.18.3 --memory=3g --bootstrapper=kubeadm \
 --extra-config=kubelet.authentication-token-webhook=true \
@@ -18,11 +20,18 @@ helm install demo-adapter stable/prometheus-adapter \
   --set prometheus.url="http://demo-prometheus-server.default.svc" \
   --set prometheus.port="80" \
   --set metricsRelistInterval="30s" \
-  --set v="10" \
-  --set rules.custom="adapter-config.yaml"
+  -f "adapter-config.yaml"
 # helm delete demo-adapter
 
 # Deploy our sample application
 kubectl apply -f sample-metrics-app.yaml
+
+# Deploy the metrics server
+minikube addons enable metrics-server
+#kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/download/v0.3.6/components.yaml
+
+# Deploy VPA
+cd autoscaler/vertical-pod-autoscaler && ./hack/vpa-up.sh && cd $DEMO_HOME
+kubectl create -f test-vpa.yaml
 
 watch kubectl get po -A

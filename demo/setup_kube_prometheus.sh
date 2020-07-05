@@ -15,13 +15,18 @@ kubectl apply -f kube-prometheus/manifests/setup
 sleep 5;
 kubectl apply -f kube-prometheus/manifests/
 
-# Register our API server to the custom metrics API server
-kubectl apply -f demo-kube-prometheus/custom-metrics.yaml
+# Deploy Prometheus adapter
+# https://github.com/directxman12/k8s-prometheus-adapter
+helm install demo-adapter stable/prometheus-adapter \
+  --set prometheus.url="http://prometheus-k8s.monitoring.svc" \
+  --set metricsRelistInterval="30s" \
+  -f "adapter-config.yaml"
+# helm delete demo-adapter
 
 # Deploy our sample application
 kubectl apply -f sample-metrics-app.yaml
 
 # Deploy the service monitor used to scrape the metrics
-kubectl apply -f demo-kube-prometheus/service-monitor.yaml
+#kubectl apply -f demo-kube-prometheus/service-monitor.yaml
 
 watch kubectl get po -A
