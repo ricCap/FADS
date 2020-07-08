@@ -20,11 +20,11 @@ helm install demo-adapter stable/prometheus-adapter \
   --set prometheus.url="http://demo-prometheus-server.default.svc" \
   --set prometheus.port="80" \
   --set metricsRelistInterval="30s" \
-  -f "adapter-config.yaml"
+  -f "rsc/adapter-config.yaml"
 # helm delete demo-adapter
 
 # Deploy our sample application
-kubectl apply -f sample-metrics-app.yaml
+kubectl apply -f rsc/sample-metrics-app.yaml
 
 # Deploy the metrics server
 minikube addons enable metrics-server
@@ -32,6 +32,6 @@ minikube addons enable metrics-server
 
 # Deploy VPA
 cd autoscaler/vertical-pod-autoscaler && ./hack/vpa-up.sh && cd $DEMO_HOME
-kubectl create -f test-vpa.yaml
+kubectl create -f rsc/test-vpa.yaml
 
 watch kubectl get po -A
