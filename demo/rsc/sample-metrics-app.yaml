@@ -33,7 +33,7 @@ spec:
         effect: NoExecute
         tolerationSeconds: 0
       containers:
-      - image: luxas/autoscale-demo:v0.1.2
+      - image: riccap/autoscale-demo:v0.0.2
         name: sample-metrics-app
         resources:
           limits:

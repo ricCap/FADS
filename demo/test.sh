@@ -33,22 +33,29 @@ function main() {
     fi
 
     log "Retrieving custom metrics"
-    custom_metrics_response="$(curl -s $CUSTOM_METRICS_URL | jq -c .)"
+    custom_metrics_response="$(curl -s $CUSTOM_METRICS_URL)"
     log "Custom metrics: $custom_metrics_response"
 
-    log "Parsing custom metrics"
-    while read -r item; do
-      pod_name="$(echo $item | jq '.describedObject.name')"
-      http_requests_per_second="$(echo $item | jq -r '.value')"
-      log "POD $pod_name has value $http_requests_per_second for metric http_requests_per_second"
-      value_milli="${http_requests_per_second/m/}"
-      if [[ $value_milli -ge $HTTP_REQUESTS_AUTOSCALING_THRESHOLD_MILLI ]]; then
-        log "Autoscaling pods to new resource limits: ${HTTP_REQUESTS_AUTOSCALING_THRESHOLD_MILLI}m"
-        kubectl patch deployment sample-metrics-app --type json -p="[{\"op\": \"replace\", \"path\": \"/spec/template/spec/containers/0/resources/limits/cpu\", \"value\":\"${HTTP_REQUESTS_AUTOSCALING_THRESHOLD_MILLI}m\"}, {\"op\": \"replace\", \"path\": \"/spec/template/spec/containers/0/resources/requests/cpu\", \"value\":\"${HTTP_REQUESTS_AUTOSCALING_THRESHOLD_MILLI}m\"}]"
-        break
-      fi
-
-    done <<< $(echo $custom_metrics_response | jq -c '.items[]')
+    if [[ $(echo $custom_metrics_response | jq -e '.[]' &>/dev/null; echo $?) -ne 0 ]] ; then
+      log "Could not retrieve custom metrics; retrying in $AUTOSCALING_PERIOD_SECONDS seconds"
+    else
+      log "Parsing custom metrics"
+      while read -r item; do
+        pod_name="$(echo $item | jq '.describedObject.name')"
+        http_requests_per_second="$(echo $item | jq -r '.value')"
+        if [[ -n "$pod_name" && -n "$http_requests_per_second" ]]; then
+          log "POD $pod_name has value $http_requests_per_second for metric http_requests_per_second"
+          value_millis="${http_requests_per_second/m/}"
+          if [[ $value_millis -ge $HTTP_REQUESTS_AUTOSCALING_THRESHOLD_MILLI ]]; then
+            log "Autoscaling pods to new resource limits: ${HTTP_REQUESTS_AUTOSCALING_THRESHOLD_MILLI}m"
+            kubectl patch deployment sample-metrics-app --type json -p="[{\"op\": \"replace\", \"path\": \"/spec/template/spec/containers/0/resources/limits/cpu\", \"value\":\"${HTTP_REQUESTS_AUTOSCALING_THRESHOLD_MILLI}m\"}, {\"op\": \"replace\", \"path\": \"/spec/template/spec/containers/0/resources/requests/cpu\", \"value\":\"${HTTP_REQUESTS_AUTOSCALING_THRESHOLD_MILLI}m\"}]"
+            break
+          fi
+        else
+          log "No metric named \"http_requests_per_second; retrying in $AUTOSCALING_PERIOD_SECONDS seconds"
+        fi
+      done <<< $(echo $custom_metrics_response | jq -c '.items[]')
+    fi
 
     sleep $AUTOSCALING_PERIOD_SECONDS
     HTTP_REQUESTS_AUTOSCALING_THRESHOLD_MILLI=$((HTTP_REQUESTS_AUTOSCALING_THRESHOLD_MILLI + 50))

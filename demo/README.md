@@ -16,9 +16,7 @@ The material in this tutorial is inspired by and liberally taken from these two 
 
 The demo has been tested in the following environments:
 
-```
-Ubuntu 20.04
-```
+> Ubuntu 20.04
 
 There are two scripts `setup_helm.sh` and `setup_kube_prometheus.sh`. The main difference between the two is the way Prometheus is deployed, either via the Helm chart or through the managed kube_prometheus project. If you are not sure what the difference is, or you have never deployed prometheus before, follow the kube_prometheus path. The Helm solution is presented since in the environment where FADS will operate Prometheus is deployed usin the Helm chart.
 
@@ -37,9 +35,11 @@ The helm walkthough requires you to have [Helm](https://helm.sh/docs/intro/insta
 
 - Get the stable repository (for setup_help.sh)
 
-  `helm repo add stable <https://kubernetes-charts.storage.googleapis.com>`
+`helm repo add stable <https://kubernetes-charts.storage.googleapis.com>`
 
 ## Run
+
+> **Note that the system takes ~10m to spin up and to serve the custom metrics at custom.metrics.k8s.io**
 
 Depending on what you chose above, run either `./setup-helm.sh` or `./setup-kube-prometheus.sh`. The interactive command `watch kubectl get po -A` is run at the end of both scripts, allowing you to check the system starting up. Please wait till all pods enter the Running state before moving to the test phase.
 
