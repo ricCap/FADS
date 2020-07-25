@@ -1,0 +1,16 @@
+apiVersion: riccap.example.com/v1
+kind: FadScaler
+metadata:
+  name: sample-metrics-app-fads
+spec:
+  targetResource:
+    name: sample-metrics-app
+    namespace: default
+    resourceType: Deployment
+  requirements:
+    - name: "An upper bound on the http requests per second"
+      targetMetrics:
+        - name: http_requests_per_second
+          condition: lt
+          value: 400
+  status: created

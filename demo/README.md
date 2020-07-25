@@ -2,29 +2,28 @@
 
 Our wish with this tutorial is to present the general idea of what FogAtlasDynamicScheduler will become.
 
-FogAtlasDynamicScheduler will allow dynamic vertical autoscaling on pods based on custom metrics (and possibly, recommended actions) exposed by the pods themselves. A complete workflow might be like this:
+FogAtlasDynamicScheduler will allow dynamic autoscaling of FogAtlas deployments based on custom metrics (and possibly, recommended actions) exposed by the pods themselves. A complete workflow might be like:
 
-- pod exposes custom metric and recommended action on its /metrics endpoint (e.g. `requests_5xx_error_rate, "lt", "3%", "SCALE_VERTICAL"`)
-- the metrics are scraped by Prometheus and exposed on the K8s API custom.metrics.k8s.io
-- FADS reads the metrics from K8s API and analyses whether the condition is met
-- (optional) FADS collects recommendations on resource metrics from Vertical Pod Autoscaler
-- If `requests_5xx_error_rate > 0.03` then: "SCALE_VERTICAL"
+- a new resource (specified by a Custom Resource Definition) called **fadsrecommend** is created and target custom metrics are specified on which the Fog Atlas Dynamic Scheduler will act upon (e.g. react on a metric called `requests_5xx_error_rate_1m` exposed by pods of a given FogAtlas deployment)
+- custom metrics exposed by the target pods (`requests_5xx_error_rate_1m 200`) are scraped by Prometheus and exposed on the K8s API custom.metrics.k8s.io
+- FADS reads the metrics from K8s API and analyses whether the requirements specified in **fadsrecommend** are met
+- FADS collects system information from Prometheus and e.g. recommendations on resource metrics from Vertical Pod Autoscaler and decides how to modify the **fadep** resource to meet the requirements (e.g. reschedule, increase assigned resources)
 
 The tutorial quickly shows how to expose pod-generated custom metrics (scraped by Prometheus on the pods /metrics endpoint) to custom.metrics.k8s.io. We will use the [prometheus adapter](https://github.com/DirectXMan12/k8s-prometheus-adapter) as our implementation for the custom metrics API during this tutorial. If you want to implement your own version you should check out this [repository](https://github.com/kubernetes-sigs/custom-metrics-apiserver), which gives you all the boilerplate code to set you up as quick as possible.
 
-The material in this tutorial is inspired by and liberally taken from these two examples [1](https://github.com/luxas/kubeadm-workshop) and [2]() by [Lucas Käldström](https://github.com/luxas).
+The material in this tutorial is inspired by and liberally taken from these two examples [1](https://github.com/luxas/kubeadm-workshop) and [2](https://github.com/DirectXMan12/k8s-prometheus-adapter/blob/master/docs/walkthrough.md).
 
 The demo has been tested in the following environments:
 
 > Ubuntu 20.04
 
-There are two scripts `setup_helm.sh` and `setup_kube_prometheus.sh`. The main difference between the two is the way Prometheus is deployed, either via the Helm chart or through the managed kube_prometheus project. If you are not sure what the difference is, or you have never deployed prometheus before, follow the kube_prometheus path. The Helm solution is presented since in the environment where FADS will operate Prometheus is deployed usin the Helm chart.
+There are two scripts `setup_helm.sh` and `setup_kube_prometheus.sh`. The main difference between the two is the way Prometheus is deployed, either via the Helm chart or through the managed kube_prometheus project. If you are not sure what the difference is, or you have never deployed prometheus before, follow the kube_prometheus path. The Helm solution is presented since in the environment where FADS will operate Prometheus is deployed using the Helm chart.
 
 # Prerequisites
 
-This tutorial assumes that you have [Minikube](https://kubernetes.io/docs/tasks/tools/install-minikube/) installed. [kind](https://kind.sigs.k8s.io/docs/user/configuration/) can also be used, though the configuration changes (you should deploy the metrics server through the YAML file and not as an addon) will not be covered here.
+This tutorial assumes that you have [Minikube](https://kubernetes.io/docs/tasks/tools/install-minikube/) installed. [kind](https://kind.sigs.k8s.io/docs/user/configuration/) can also be used, though the configuration changes will not be covered here (you should deploy the metrics server through the YAML file and not as an addon).
 
-The helm walkthough requires you to have [Helm](https://helm.sh/docs/intro/install/) insalled.
+The helm walkthough requires you to have [Helm](https://helm.sh/docs/intro/install/) installed.
 
 - Clone the necessary repositories
 
@@ -39,9 +38,9 @@ The helm walkthough requires you to have [Helm](https://helm.sh/docs/intro/insta
 
 ## Run
 
-> **Note that the system takes ~10m to spin up and to serve the custom metrics at custom.metrics.k8s.io**
+> **Note that the system takes ~10-15m to spin up and to serve the custom metrics at custom.metrics.k8s.io**
 
-Depending on what you chose above, run either `./setup-helm.sh` or `./setup-kube-prometheus.sh`. The interactive command `watch kubectl get po -A` is run at the end of both scripts, allowing you to check the system starting up. Please wait till all pods enter the Running state before moving to the test phase.
+Depending on what you chose above, run either `make deploy-helm` or `make deploy-kube-prometheus`. The interactive command `watch kubectl get po -A` is run at the end of both scripts, allowing you to watch the system starting up. Please wait till all pods enter the Running state before moving to the test phase.
 
 Here we give a brief description of what the two scripts do:
 
@@ -132,4 +131,4 @@ To check that the VPA is working simply run `kubectl describe vpa`. To check the
 
 To simulate how FADS will work, run the `test.sh` command once the metrics are exposed at custom.metrics.k8s.io. Re-run the command `kubectl get deploy sample-metrics-app -o json | jq '.spec.template.spec.containers[0].resources'` and see that the resources have been scaled.
 
-The script increases the CPU limits/requests of the Deployment until the condition is met. Modify `AUTOSCALING_PERIOD_SECONDS` ro speed up/down the autoscaling.
+The script increases the CPU limits/requests of the Deployment until the condition is met. Modify `AUTOSCALING_PERIOD_SECONDS` to speed up/slow down the autoscaling.

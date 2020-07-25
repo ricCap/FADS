@@ -1,0 +1,72 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: fadscalers.riccap.example.com
+spec:
+  group: riccap.example.com
+  scope: Namespaced
+  names:
+    plural: fadscalers
+    singular: fadscaler
+    kind: FadScaler
+    shortNames:
+    - fads
+  versions:
+    - name: v1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              properties:
+                metadata:
+                  type: object
+                targetResource:
+                  type: object
+                  properties:
+                      name:
+                        type: string
+                        description: the name of the resource
+                      resourceType:
+                        type: string
+                        description: one of the supported resources, for now only fadelp
+                      namespace:
+                        type: string
+                        description: namespace of the target resource
+                      customSelector:
+                        type: string
+                        description: a custom selector that can be used instead to target multiple resources
+                requirements:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                        description: An identifier for this requirement
+                      targetMetrics:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            name:
+                              type: string
+                              description: name of the metric exposed at custom.k8s.io
+                            condition:
+                              type: string
+                              description: should be evaluated to true for the positive case
+                            value:
+                              type: integer
+                              description: the value against which the condition is tested
+                            priority:
+                              type: integer
+                              description: ascending priorities evaluated based on the controller policy
+                policy:
+                  type: string
+                  description: defines what algorithm the controller should adopt for this resource
+                status:
+                  type: string
+                  description: specifies the current status of the autoscaler
